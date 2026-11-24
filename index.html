@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Control de Acceso Cloud</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #121212;
+            color: #fff;
+            margin: 0;
+            padding: 14px;
+        }
+
+        .login-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 92vh;
+        }
+
+        .box {
+            width: 100%;
+            max-width: 360px;
+            background: #1e1e1e;
+            padding: 28px;
+            border-radius: 14px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+            border-top: 4px solid #00ff88;
+        }
+
+        .wrap {
+            display: none;
+            max-width: 720px;
+            margin: 10px auto;
+            background: #1e1e1e;
+            padding: 22px;
+            border-radius: 14px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+        }
+
+        .top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        h1 {
+            color: #00ff88;
+            margin: 0;
+            font-size: 21px;
+        }
+
+        .top-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        button {
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 13px;
+            padding: 9px 14px;
+        }
+
+        .btn-open {
+            background: #00b4d8;
+            color: #0a0a0a;
+        }
+
+        .btn-out {
+            background: #2e2e2e;
+            color: #ff6b6b;
+            border: 1px solid #444;
+        }
+
+        .btn-green {
+            background: #00ff88;
+            color: #121212;
+        }
+
+        .btn-red {
+            background: #e63946;
+            color: #fff;
+        }
+
+        .btn-warn {
+            background: #ffb703;
+            color: #121212;
+        }
+
+        .btn-sm {
+            padding: 5px 9px;
+            font-size: 12px;
+        }
+
+        .grid2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        @media (max-width: 540px) {
+            .grid2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: #262626;
+            padding: 15px;
+            border-radius: 10px;
+            border-top: 4px solid #444;
+        }
+
+        .lbl {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            color: #aaa;
+            margin-bottom: 6px;
+        }
+
+        .val {
+            font-size: 17px;
+            font-weight: bold;
+        }
+
+        .cerrada {
+            border-top-color: #00b4d8;
+            color: #00b4d8;
+        }
+
+        .abierta {
+            border-top-color: #00ff88;
+            color: #00ff88;
+            background: #1a3326;
+        }
+
+        .banner {
+            background: #2a2a2a;
+            padding: 14px;
+            border-radius: 10px;
+            border-left: 5px solid #00b4d8;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .banner span {
+            font-size: 16px;
+            font-weight: bold;
+            display: block;
+            margin-top: 4px;
+        }
+
+        .panel {
+            background: #252525;
+            padding: 16px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            border: 1px solid #333;
+        }
+
+        .panel h3 {
+            margin: 0 0 12px;
+            font-size: 15px;
+            color: #ffcc00;
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        input {
+            width: 100%;
+            flex: 1;
+            min-width: 130px;
+            padding: 10px 11px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background: #151515;
+            color: #fff;
+            font-size: 13px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #00ff88;
+        }
+
+        .msg {
+            margin-top: 8px;
+            font-size: 13px;
+            min-height: 18px;
+            color: #ffcc00;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 13px;
+        }
+
+        li.usr-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 0;
+            border-bottom: 1px solid #333;
+            flex-wrap: wrap;
+        }
+
+        li.usr-item:last-child,
+        li.hist-item:last-child {
+            border-bottom: none;
+        }
+
+        li.hist-item {
+            padding: 6px 0;
+            border-bottom: 1px solid #333;
+            color: #ccc;
+        }
+
+        .pin-tag {
+            background: #1e3a2f;
+            color: #00ff88;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: 6px;
+        }
+
+        .edit-box {
+            display: none;
+            background: #1c1c1c;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border: 1px solid #ffb703;
+        }
+
+        .pill {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 99px;
+            background: #1e3a2f;
+            color: #00ff88;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="login-wrap" id="login-view">
+        <div class="box">
+            <h1 style="text-align:center;margin-bottom:6px;">🔐 Acceso Cloud</h1>
+            <p style="color:#999;text-align:center;font-size:13px;margin:0 0 20px;">Inicia sesión con tus credenciales
+                MQTT</p>
+            <form onsubmit="conectar(event)">
+                <div class="lbl">Usuario HiveMQ</div>
+                <input id="l-user" type="text" placeholder="admin" required style="margin-bottom:14px;">
+                <div class="lbl">Contraseña</div>
+                <input id="l-pass" type="password" placeholder="••••••" required style="margin-bottom:18px;">
+                <button class="btn-green" style="width:100%;padding:12px;" type="submit">Conectar</button>
+            </form>
+            <div class="msg" id="l-err" style="text-align:center;color:#ff4444;"></div>
+        </div>
+    </div>
+
+    <div class="wrap" id="app-view">
+        <div class="top">
+            <div>
+                <h1>🛡️ Control de Acceso Cloud</h1>
+                <span class="pill" id="conn-pill">🟢 Conectado en tiempo real</span>
+            </div>
+            <div class="top-btns">
+                <button class="btn-open" onclick="enviar({accion:'abrir'})">🔓 Abrir Puerta</button>
+                <button class="btn-out" onclick="desconectar()">Salir</button>
+            </div>
+        </div>
+
+        <div class="grid2">
+            <div class="card cerrada" id="c-puerta">
+                <div class="lbl">Estado de la Puerta</div>
+                <div class="val" id="t-puerta">🔒 CERRADA</div>
+            </div>
+            <div class="card" style="border-top-color:#a855f7;">
+                <div class="lbl">Último Desbloqueo</div>
+                <div class="val" id="t-ultimo" style="font-size:15px;">Esperando datos...</div>
+            </div>
+        </div>
+
+        <div class="banner" id="banner">
+            <div class="lbl" style="margin:0;">Actividad del Sistema</div>
+            <span id="t-estado">Sincronizando con ESP32...</span>
+        </div>
+        <div class="msg" id="m-global" style="text-align:center;margin-bottom:12px;"></div>
+
+        <div class="panel">
+            <h3>➕ Registrar Nuevo Usuario (Huella + PIN)</h3>
+            <div class="row">
+                <input id="r-nom" type="text" placeholder="Nombre (ej. Alejo)" maxlength="20">
+                <input id="r-pin" type="text" placeholder="PIN (4-8 dígitos)" maxlength="8" inputmode="numeric">
+                <button class="btn-green" onclick="registrar()">Activar Registro</button>
+                <button class="btn-red" id="btn-can" style="display:none;"
+                    onclick="enviar({accion:'cancelar'})">Cancelar</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3 style="color:#00ff88;">👥 Administrar Usuarios Registrados</h3>
+            <ul id="l-usuarios">
+                <li class="hist-item">Cargando usuarios...</li>
+            </ul>
+            <div class="edit-box" id="edit-box">
+                <div class="lbl" style="color:#ffb703;">Editando Usuario ID #<span id="e-id-txt"></span></div>
+                <div class="row">
+                    <input id="e-id" type="hidden">
+                    <input id="e-nom" type="text" placeholder="Nuevo nombre" maxlength="20">
+                    <input id="e-pin" type="text" placeholder="PIN (vacío = sin PIN)" maxlength="8" inputmode="numeric">
+                    <button class="btn-warn" onclick="guardarEdicion()">Guardar</button>
+                    <button class="btn-out" onclick="cerrarEdicion()">Cerrar</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3 style="color:#a855f7;">⚙️ PIN Maestro del Teclado Físico</h3>
+            <div class="row">
+                <input id="a-pin" type="text" placeholder="Nuevo PIN Maestro (4-8 dígitos)" maxlength="8"
+                    inputmode="numeric">
+                <button class="btn-warn" onclick="cambiarAdmin()">Actualizar PIN</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3 style="color:#ccc;">📋 Historial de Actividad</h3>
+            <ul id="l-hist">
+                <li class="hist-item">Esperando eventos...</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const MQTT_HOST = "bf6115c1.ala.us-east-1.emqxsl.com";
+        const MQTT_URL = "wss://" + MQTT_HOST + ":8084/mqtt";
+
+        let client = null;
+        let cacheUsuarios = [];
+
+        function conectar(e) {
+            e.preventDefault();
+            const user = document.getElementById('l-user').value.trim();
+            const pass = document.getElementById('l-pass').value.trim();
+            const err = document.getElementById('l-err');
+            err.innerText = 'Conectando al servidor seguro...';
+
+            client = mqtt.connect(MQTT_URL, {
+                username: user,
+                password: pass,
+                clientId: 'web_admin_' + Math.random().toString(16).slice(2, 8),
+                clean: true,
+                reconnectPeriod: 4000
+            });
+
+            client.on('connect', () => {
+                err.innerText = '';
+                document.getElementById('login-view').style.display = 'none';
+                document.getElementById('app-view').style.display = 'block';
+                document.getElementById('conn-pill').innerText = '🟢 Conectado vía Internet';
+                client.subscribe(['acceso/estado', 'acceso/respuesta']);
+                enviar({ accion: 'sync' });
+            });
+
+            client.on('error', () => {
+                err.innerText = '❌ Credenciales incorrectas o URL de clúster inválida.';
+                if (client) client.end(true);
+            });
+
+            client.on('offline', () => {
+                document.getElementById('conn-pill').innerText = '🟡 Reconectando...';
+            });
+
+            client.on('message', (topic, message) => {
+                try {
+                    const d = JSON.parse(message.toString());
+                    if (topic === 'acceso/estado') actualizarUI(d);
+                    if (topic === 'acceso/respuesta') mostrarAviso(d.ok, d.mensaje);
+                } catch (ex) { }
+            });
+        }
+
+        function desconectar() {
+            if (client) client.end(true);
+            document.getElementById('app-view').style.display = 'none';
+            document.getElementById('login-view').style.display = 'flex';
+        }
+
+        function enviar(obj) {
+            if (!client || !client.connected) return mostrarAviso(false, '❌ Sin conexión con la nube.');
+            client.publish('acceso/comandos', JSON.stringify(obj));
+        }
+
+        function mostrarAviso(ok, texto) {
+            const m = document.getElementById('m-global');
+            m.style.color = ok ? '#00ff88' : '#ff4444';
+            m.innerText = texto;
+        }
+
+        function registrar() {
+            const nom = document.getElementById('r-nom').value.trim();
+            const pin = document.getElementById('r-pin').value.trim();
+            if (!nom) return mostrarAviso(false, '⚠️ Escribe un nombre.');
+            if (!/^[0-9]{4,8}$/.test(pin)) return mostrarAviso(false, '⚠️ El PIN debe tener 4 a 8 dígitos.');
+            enviar({ accion: 'registrar', nombre: nom, codigo: pin });
+            document.getElementById('r-nom').value = '';
+            document.getElementById('r-pin').value = '';
+        }
+
+        function abrirEdicion(id) {
+            const u = cacheUsuarios.find(x => String(x.id) === String(id));
+            if (!u) return;
+            document.getElementById('e-id').value = u.id;
+            document.getElementById('e-id-txt').innerText = u.id;
+            document.getElementById('e-nom').value = u.nombre;
+            document.getElementById('e-pin').value = u.codigo || '';
+            document.getElementById('edit-box').style.display = 'block';
+        }
+
+        function cerrarEdicion() { document.getElementById('edit-box').style.display = 'none'; }
+
+        function guardarEdicion() {
+            const id = document.getElementById('e-id').value;
+            const nom = document.getElementById('e-nom').value.trim();
+            const pin = document.getElementById('e-pin').value.trim();
+            if (!nom) return mostrarAviso(false, '⚠️ El nombre es obligatorio.');
+            if (pin && !/^[0-9]{4,8}$/.test(pin)) return mostrarAviso(false, '⚠️ PIN inválido (4-8 dígitos).');
+            enviar({ accion: 'editar', id: id, nombre: nom, codigo: pin });
+            cerrarEdicion();
+        }
+
+        function borrarUsuario(id) {
+            const u = cacheUsuarios.find(x => String(x.id) === String(id));
+            if (!confirm('¿Eliminar a ' + (u ? u.nombre : ('ID #' + id)) + ' del sensor y del sistema?')) return;
+            enviar({ accion: 'borrar', id: id });
+        }
+
+        function cambiarAdmin() {
+            const pin = document.getElementById('a-pin').value.trim();
+            if (!/^[0-9]{4,8}$/.test(pin)) return mostrarAviso(false, '⚠️ PIN Maestro inválido (4-8 dígitos).');
+            enviar({ accion: 'config_admin', pin_maestro: pin });
+            document.getElementById('a-pin').value = '';
+        }
+
+        function actualizarUI(d) {
+            const cp = document.getElementById('c-puerta');
+            const tp = document.getElementById('t-puerta');
+            if (d.puerta === 'ABIERTA') { cp.className = 'card abierta'; tp.innerText = '🔓 ABIERTA'; }
+            else { cp.className = 'card cerrada'; tp.innerText = '🔒 CERRADA'; }
+
+            document.getElementById('t-ultimo').innerText = d.ultimo_usuario || 'Sin registros aún';
+
+            const st = document.getElementById('t-estado');
+            const bn = document.getElementById('banner');
+            st.innerText = d.estado || 'Listo';
+            if (d.estado && (d.estado.includes('✅') || d.estado.includes('GUARDADA'))) { st.style.color = '#00ff88'; bn.style.borderLeftColor = '#00ff88'; }
+            else if (d.estado && (d.estado.includes('❌') || d.estado.includes('⚠️'))) { st.style.color = '#ff4444'; bn.style.borderLeftColor = '#ff4444'; }
+            else if (d.modo_registro > 0) { st.style.color = '#ffcc00'; bn.style.borderLeftColor = '#ffcc00'; }
+            else { st.style.color = '#fff'; bn.style.borderLeftColor = '#00b4d8'; }
+
+            document.getElementById('btn-can').style.display = (d.modo_registro > 0) ? 'inline-block' : 'none';
+
+            cacheUsuarios = d.usuarios || [];
+            const ulU = document.getElementById('l-usuarios');
+            if (cacheUsuarios.length > 0) {
+                ulU.innerHTML = cacheUsuarios.map(u =>
+                    '<li class="usr-item"><div><strong>ID #' + u.id + '</strong> - ' + u.nombre +
+                    (u.codigo ? '<span class="pin-tag">PIN: ' + u.codigo + '</span>' : '<span class="pin-tag" style="background:#333;color:#aaa;">Solo huella</span>') +
+                    '</div><div><button class="btn-warn btn-sm" onclick="abrirEdicion(' + u.id + ')">✏️ Editar</button> ' +
+                    '<button class="btn-red btn-sm" onclick="borrarUsuario(' + u.id + ')">🗑️ Borrar</button></div></li>'
+                ).join('');
+            } else {
+                ulU.innerHTML = '<li class="hist-item">No hay usuarios registrados aún.</li>';
+            }
+
+            const ulH = document.getElementById('l-hist');
+            if (d.historial && d.historial.length > 0) {
+                ulH.innerHTML = d.historial.map(x => '<li class="hist-item">' + x + '</li>').join('');
+            }
+        }
+    </script>
+</body>
+
+</html>
